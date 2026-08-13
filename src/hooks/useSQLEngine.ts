@@ -32,7 +32,7 @@ export const useSQLEngine = (caseData: CaseData | null) => {
         dbRef.current = null;
       }
     };
-  }, [caseData?.id]);
+  }, [caseData]);
 
   const runQuery = useCallback((sql: string): { result: QueryResult; error: string | null } => {
     if (!dbRef.current) return { result: null, error: 'Database not ready.' };

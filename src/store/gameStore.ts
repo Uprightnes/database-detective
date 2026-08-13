@@ -82,7 +82,7 @@ export const useGameStore = create<GameState>()(
       setPartnerMessage: (msg) => set({ partnerMessage: msg }),
 
       revealNextHint: () => {
-        const { hintIndex, activeCaseId, caseProgress } = get();
+        const { hintIndex, activeCaseId } = get();
         if (!activeCaseId) return;
         const newIndex = hintIndex + 1;
         set({ hintIndex: newIndex });

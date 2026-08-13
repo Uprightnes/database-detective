@@ -23,7 +23,6 @@ const GamePage: React.FC = () => {
     currentQuery, setQuery,
     queryResult, queryError, setQueryResult,
     partnerMessage, setPartnerMessage,
-    hintIndex,
     isHardMode,
     caseProgress, startCase, completeChapter, completeCase, incrementQueryCount,
   } = useGameStore();
@@ -44,7 +43,7 @@ const GamePage: React.FC = () => {
     if (caseData && !caseProgress[caseData.id]) {
       startCase(caseData.id);
     }
-  }, [caseData?.id]);
+  }, [caseData, caseProgress, startCase]);
 
   // Restore chapter index from progress
   useEffect(() => {
@@ -52,7 +51,7 @@ const GamePage: React.FC = () => {
     const lastDone = progress.completedChapters.length;
     const nextIdx = Math.min(lastDone, caseData.chapters.length - 1);
     setActiveChapterIndex(nextIdx);
-  }, [caseData?.id]);
+  }, [caseData, progress]);
 
   const handleRun = useCallback(() => {
     if (!ready || !caseData) {
@@ -126,7 +125,7 @@ const GamePage: React.FC = () => {
 
       setIsRunning(false);
     }, 120);
-  }, [ready, caseData, currentQuery, activeChapterIndex, runQuery, validateResult]);
+  }, [ready, caseData, currentQuery, activeChapterIndex, runQuery, validateResult, completeCase, completeChapter, completedChapters, incrementQueryCount, navigate, setPartnerMessage, setQueryResult]);
 
   const handleNextChapter = () => {
     if (!caseData) return;
@@ -151,7 +150,6 @@ const GamePage: React.FC = () => {
   }
 
   const chapter = caseData.chapters[activeChapterIndex];
-  const isChapterDone = completedChapters.includes(chapter.id);
   const isLastChapter = activeChapterIndex === caseData.chapters.length - 1;
 
   return (
