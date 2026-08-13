@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; }
+
+body {
+  background-color: #1a1a1a;
+  color: #f2ede4;
+  font-family: 'IBM Plex Sans', sans-serif;
+  margin: 0;
+}
+
+.font-display { font-family: 'Special Elite', serif; }
+.font-mono { font-family: 'IBM Plex Mono', monospace; }
+
+/* CodeMirror overrides */
+.cm-editor {
+  height: 100%;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 14px;
+}
+.cm-editor.cm-focused { outline: none; }
+.cm-scroller { overflow: auto; }
+
+/* Evidence pin animation */
+@keyframes pinDrop {
+  0% { transform: translateY(-20px) rotate(-3deg); opacity: 0; }
+  70% { transform: translateY(4px) rotate(1deg); }
+  100% { transform: translateY(0) rotate(-1deg); opacity: 1; }
+}
+.pin-drop { animation: pinDrop 0.4s ease-out forwards; }
+
+/* Typewriter cursor */
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+.cursor::after {
+  content: '|';
+  animation: blink 1s infinite;
+  margin-left: 2px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #2a2a2a; }
+::-webkit-scrollbar-thumb { background: #4a4030; border-radius: 3px; }
+
+/* Result table */
+.result-table { border-collapse: collapse; width: 100%; }
+.result-table th {
+  background: #2e2a22;
+  color: #c8a84b;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 12px;
+  text-align: left;
+  border-bottom: 1px solid #4a4030;
+}
+.result-table td {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  padding: 5px 12px;
+  border-bottom: 1px solid #2a2520;
+  color: #d4cfc6;
+}
+.result-table tr:hover td { background: #2a2520; }
