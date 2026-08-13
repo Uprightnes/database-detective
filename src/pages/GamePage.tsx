@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getCaseById } from '../data/cases';
 import { useSQLEngine } from '../hooks/useSQLEngine';
@@ -37,7 +37,7 @@ const GamePage: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   const progress = caseData ? caseProgress[caseData.id] : null;
-  const completedChapters = progress?.completedChapters || [];
+  const completedChapters = useMemo(() => progress?.completedChapters || [], [progress]);
 
   useEffect(() => {
     if (caseData && !caseProgress[caseData.id]) {
