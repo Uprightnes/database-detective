@@ -49,6 +49,7 @@ export interface CaseProgress {
   queriesRun: number;
   startedAt: number;
   completedAt?: number;
+  elapsedSeconds?: number;
   rating?: 'Rookie' | 'Detective' | 'Senior Detective' | 'Chief';
 }
 

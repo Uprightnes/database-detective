@@ -132,7 +132,7 @@ const HowToPlayPage: React.FC = () => {
         >
           ← Home
         </button>
-        <span className="text-badge font-display text-lg">Database Detective</span>
+        <span className="text-badge font-display text-lg">SQL Precinct</span>
         <button
           onClick={() => navigate('/cases')}
           className="text-muted hover:text-aged font-mono text-xs transition-colors"

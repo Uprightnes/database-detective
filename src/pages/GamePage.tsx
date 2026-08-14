@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getCaseById } from '../data/cases';
 import { useSQLEngine } from '../hooks/useSQLEngine';
@@ -14,6 +14,14 @@ import PartnerBar from '../components/PartnerBar';
 type PanelTab = 'case' | 'schema';
 type ResultTab = 'results' | 'evidence';
 
+const TIMED_DIFFICULTIES = ['Detective', 'Senior Detective', 'Chief'];
+
+function formatTime(secs: number) {
+  const m = Math.floor(secs / 60).toString().padStart(2, '0');
+  const s = (secs % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
 const GamePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -24,34 +32,53 @@ const GamePage: React.FC = () => {
     queryResult, queryError, setQueryResult,
     partnerMessage, setPartnerMessage,
     isHardMode,
+    timerSeconds, tickTimer,
     caseProgress, startCase, completeChapter, completeCase, incrementQueryCount,
   } = useGameStore();
 
   const { ready, initError, runQuery, validateResult } = useSQLEngine(caseData || null);
 
+  // Chapter index is purely local — never driven by progress
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
   const [leftTab, setLeftTab] = useState<PanelTab>('case');
   const [rightTab, setRightTab] = useState<ResultTab>('results');
   const [isCorrect, setIsCorrect] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [caseStarted, setCaseStarted] = useState(false);
+
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isTimed = caseData ? TIMED_DIFFICULTIES.includes(caseData.difficulty) : false;
 
   const progress = caseData ? caseProgress[caseData.id] : null;
-  const completedChapters = useMemo(() => progress?.completedChapters || [], [progress]);
+  const completedChapters = progress?.completedChapters || [];
 
+  // Start case once on mount
   useEffect(() => {
-    if (caseData && !caseProgress[caseData.id]) {
-      startCase(caseData.id);
+    if (caseData && !caseStarted) {
+      startCase(caseData.id, isHardMode);
+      setCaseStarted(true);
+      setActiveChapterIndex(0);
     }
-  }, [caseData, caseProgress, startCase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseData?.id]);
 
-  // Restore chapter index from progress
+  // Timer — only for Detective+ difficulty
   useEffect(() => {
-    if (!caseData || !progress) return;
-    const lastDone = progress.completedChapters.length;
-    const nextIdx = Math.min(lastDone, caseData.chapters.length - 1);
-    setActiveChapterIndex(nextIdx);
-  }, [caseData, progress]);
+    if (!isTimed || !caseStarted) return;
+    timerRef.current = setInterval(() => tickTimer(), 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTimed, caseStarted]);
+
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
 
   const handleRun = useCallback(() => {
     if (!ready || !caseData) {
@@ -85,7 +112,6 @@ const GamePage: React.FC = () => {
       }
 
       const rowCount = result.rows.length;
-
       if (rowCount === 0) {
         setPartnerMessage(partnerMessages.emptyResult());
         setIsRunning(false);
@@ -96,25 +122,22 @@ const GamePage: React.FC = () => {
 
       if (valid) {
         setIsCorrect(true);
-        setShowSuccess(true);
-        setPartnerMessage(chapter.partnerOnSuccess);
         setRightTab('evidence');
+        setPartnerMessage(chapter.partnerOnSuccess);
 
-        if (!completedChapters.includes(chapter.id)) {
-          completeChapter(chapter.id, caseData.id);
-        }
+        // Mark chapter done in store (without triggering chapter index change)
+        completeChapter(chapter.id, caseData.id);
 
-        // Check if last chapter
         const isLastChapter = activeChapterIndex === caseData.chapters.length - 1;
         if (isLastChapter) {
-          completeCase(caseData.id);
+          stopTimer();
+          completeCase(caseData.id, timerSeconds);
           setTimeout(() => navigate(`/case/${caseData.id}/solved`), 2200);
+        } else {
+          setShowSuccess(true);
         }
       } else {
-        // Diagnose the failure
-        if (rowCount === 0) {
-          setPartnerMessage(partnerMessages.emptyResult());
-        } else if (rowCount > chapter.expectedRowCount * 2) {
+        if (rowCount > chapter.expectedRowCount * 2) {
           setPartnerMessage(partnerMessages.tooManyRows(rowCount));
         } else if (rowCount < chapter.expectedRowCount) {
           setPartnerMessage(partnerMessages.tooFewRows(rowCount, chapter.expectedRowCount));
@@ -125,9 +148,15 @@ const GamePage: React.FC = () => {
 
       setIsRunning(false);
     }, 120);
-  }, [ready, caseData, currentQuery, activeChapterIndex, runQuery, validateResult, completeCase, completeChapter, completedChapters, incrementQueryCount, navigate, setPartnerMessage, setQueryResult]);
+  }, [
+    ready, caseData, currentQuery, activeChapterIndex,
+    runQuery, validateResult, completeCase, completeChapter,
+    incrementQueryCount, navigate, setPartnerMessage,
+    setQueryResult, stopTimer, timerSeconds,
+  ]);
 
-  const handleNextChapter = () => {
+  // Next chapter — purely local, no store involvement
+  const handleNextChapter = useCallback(() => {
     if (!caseData) return;
     const nextIdx = activeChapterIndex + 1;
     if (nextIdx < caseData.chapters.length) {
@@ -139,7 +168,7 @@ const GamePage: React.FC = () => {
       setShowSuccess(false);
       setLeftTab('case');
     }
-  };
+  }, [activeChapterIndex, caseData, setPartnerMessage, setQuery, setQueryResult]);
 
   if (!caseData) {
     return (
@@ -164,12 +193,21 @@ const GamePage: React.FC = () => {
             ← Cases
           </button>
           <span className="text-[#2a2520]">|</span>
-          <span className="text-badge font-display text-sm">Database Detective</span>
+          <span className="text-badge font-display text-sm">🔍 SQL Precinct</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-muted font-mono text-xs truncate max-w-[200px]">
+          <span className="text-muted font-mono text-xs truncate max-w-[180px]">
             {caseData.title}
           </span>
+          {isTimed && (
+            <span
+              className={`font-mono text-sm font-bold tabular-nums px-2 py-0.5 rounded ${
+                timerSeconds > 600 ? 'text-danger bg-danger/10' : 'text-badge bg-badge/10'
+              }`}
+            >
+              ⏱ {formatTime(timerSeconds)}
+            </span>
+          )}
           {isHardMode && (
             <span className="bg-danger/20 text-danger font-mono text-xs px-2 py-0.5 rounded">
               HARD
@@ -179,7 +217,11 @@ const GamePage: React.FC = () => {
             className={`font-mono text-xs px-2 py-0.5 rounded ${
               caseData.difficulty === 'Rookie'
                 ? 'bg-solved/20 text-green-400'
-                : 'bg-wire/20 text-wire'
+                : caseData.difficulty === 'Detective'
+                ? 'bg-wire/20 text-wire'
+                : caseData.difficulty === 'Senior Detective'
+                ? 'bg-badge/20 text-badge'
+                : 'bg-danger/20 text-danger'
             }`}
           >
             {caseData.difficulty}
@@ -187,9 +229,9 @@ const GamePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main 3-column layout */}
+      {/* Main layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* LEFT PANEL — Case / Schema */}
+        {/* LEFT PANEL */}
         <div className="w-72 flex-shrink-0 flex flex-col border-r border-[#2a2520]">
           <div className="flex border-b border-[#2a2520] flex-shrink-0">
             {(['case', 'schema'] as PanelTab[]).map((tab) => (
@@ -268,7 +310,7 @@ const GamePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Results area */}
+          {/* Results */}
           <div className="flex flex-col flex-1 overflow-hidden">
             <div className="flex border-b border-[#2a2520] flex-shrink-0">
               {(['results', 'evidence'] as ResultTab[]).map((tab) => (
@@ -281,7 +323,9 @@ const GamePage: React.FC = () => {
                       : 'text-muted hover:text-aged'
                   }`}
                 >
-                  {tab === 'evidence' ? `Evidence Board (${completedChapters.length})` : 'Results'}
+                  {tab === 'evidence'
+                    ? `Evidence Board (${completedChapters.length})`
+                    : 'Results'}
                 </button>
               ))}
             </div>
@@ -297,7 +341,6 @@ const GamePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Partner bar */}
           <PartnerBar
             message={partnerMessage}
             isError={!!queryError}
@@ -316,6 +359,11 @@ const GamePage: React.FC = () => {
               <p className="text-paper/80 font-body text-sm leading-relaxed">
                 {chapter.successMessage}
               </p>
+              {isTimed && (
+                <p className="text-badge font-mono text-sm mt-3">
+                  ⏱ {formatTime(timerSeconds)}
+                </p>
+              )}
             </div>
             <button
               onClick={() => { setShowSuccess(false); handleNextChapter(); }}

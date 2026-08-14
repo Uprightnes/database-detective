@@ -24,7 +24,7 @@ const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-ink">
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 border-b border-[#2a2520]">
-        <span className="text-badge font-display text-xl">Database Detective</span>
+        <span className="text-badge font-display text-xl">SQL Precinct</span>
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/how-to-play')}
@@ -55,7 +55,7 @@ const LandingPage: React.FC = () => {
         </h1>
 
         <p className="text-aged font-body text-lg leading-relaxed max-w-2xl mx-auto mb-10">
-          Database Detective is a mystery game where you solve real crimes
+          SQL Precinct is a mystery game where you solve real crimes
           using SQL queries. Every clue is a table. Every answer is a query.
           The truth is always in the data.
         </p>
@@ -164,7 +164,7 @@ const LandingPage: React.FC = () => {
       {/* Footer */}
       <div className="border-t border-[#2a2520] py-8 text-center">
         <p className="text-muted font-mono text-xs">
-          Database Detective — Learn SQL by solving crimes.
+          SQL Precinct — Learn SQL by solving crimes.
         </p>
         <p className="text-muted/50 font-mono text-xs mt-1">
           All cases are fictional. Any resemblance to real persons is coincidental.

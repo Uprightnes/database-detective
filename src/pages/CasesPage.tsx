@@ -29,7 +29,7 @@ const CasesPage: React.FC = () => {
         >
           ← Home
         </button>
-        <span className="text-badge font-display text-lg">Database Detective</span>
+        <span className="text-badge font-display text-lg">SQL Precinct</span>
         <div />
       </div>
 
